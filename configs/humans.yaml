@@ -1,0 +1,17 @@
+humans:
+  - id: h0
+    position: [18, 46]
+    goal: [95, 50]
+    personality: cautious
+  - id: h1
+    position: [21, 49]
+    goal: [95, 50]
+    personality: normal
+  - id: h2
+    position: [24, 52]
+    goal: [95, 50]
+    personality: social
+  - id: h3
+    position: [27, 45]
+    goal: [95, 50]
+    personality: curious

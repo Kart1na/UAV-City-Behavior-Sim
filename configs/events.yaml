@@ -1,0 +1,6 @@
+events:
+  - id: fire_0
+    kind: fire
+    position: [72, 45]
+    radius: 14
+    active: true

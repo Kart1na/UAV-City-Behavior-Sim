@@ -1,0 +1,29 @@
+bounds:
+  width: 100
+  height: 100
+buildings:
+  - id: block_a
+    x: 38
+    y: 35
+    width: 12
+    height: 22
+  - id: block_b
+    x: 62
+    y: 18
+    width: 10
+    height: 16
+roads:
+  - id: main_road
+    x: 0
+    y: 44
+    width: 100
+    height: 12
+obstacles:
+  - id: barrier_0
+    x: 55
+    y: 52
+    width: 5
+    height: 4
+exits:
+  - [0, 50]
+  - [100, 50]
