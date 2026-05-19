@@ -52,30 +52,34 @@ class IsaacCityRuntime:
     _UsdShade: Any | None = None
     _Sdf: Any | None = None
     _Gf: Any | None = None
+    _kit_app: Any | None = None
     _human_prims: dict[str, Any] = field(default_factory=dict)
     _event_prims: dict[str, Any] = field(default_factory=dict)
     _materials: dict[str, Any] = field(default_factory=dict)
 
     def launch(self) -> "IsaacCityRuntime":
-        """Launch Isaac Sim and initialize an empty USD stage."""
-        try:
+        """Attach to a running Isaac Sim app or launch one from Isaac Python."""
+        if not self._attach_to_running_app():
             try:
-                from isaacsim import SimulationApp
-            except ImportError:  # Isaac Sim 2023/2024 compatibility
-                from omni.isaac.kit import SimulationApp
-        except ImportError as exc:  # pragma: no cover - requires Isaac Sim
-            raise IsaacUnavailableError(
-                "Isaac Sim Python modules were not found. Run this script with "
-                "Isaac Sim's bundled Python, for example isaac-sim.bat --no-window "
-                "--python experiments/run_isaac_episode.py"
-            ) from exc
+                try:
+                    from isaacsim import SimulationApp
+                except ImportError:  # Isaac Sim 2023/2024 compatibility
+                    from omni.isaac.kit import SimulationApp
+            except ImportError as exc:  # pragma: no cover - requires Isaac Sim
+                raise IsaacUnavailableError(
+                    "Isaac Sim Python modules were not found. Run this script with "
+                    "Isaac Sim's bundled Python, for example isaac-sim.sh --no-window "
+                    "--python experiments/run_isaac_episode.py"
+                ) from exc
 
-        self.simulation_app = SimulationApp({"headless": self.config.headless})
+            self.simulation_app = SimulationApp({"headless": self.config.headless})
 
         import omni.timeline  # type: ignore[import-not-found]
         import omni.usd  # type: ignore[import-not-found]
+        import omni.kit.app  # type: ignore[import-not-found]
         from pxr import Gf, Sdf, UsdGeom, UsdShade  # type: ignore[import-not-found]
 
+        self._kit_app = omni.kit.app.get_app()
         self._omni_usd = omni.usd
         self._timeline = omni.timeline.get_timeline_interface()
         self._UsdGeom = UsdGeom
@@ -85,7 +89,7 @@ class IsaacCityRuntime:
 
         context = self._omni_usd.get_context()
         context.new_stage()
-        self.simulation_app.update()
+        self._update_app()
         self.stage = context.get_stage()
         UsdGeom.SetStageUpAxis(self.stage, UsdGeom.Tokens.z)
         UsdGeom.SetStageMetersPerUnit(self.stage, 1.0)
@@ -142,9 +146,9 @@ class IsaacCityRuntime:
         self._require_stage()
         if self._timeline and not self._timeline.is_playing():
             self._timeline.play()
-        self.simulation_app.update()
+        self._update_app()
         if render:
-            self.simulation_app.update()
+            self._update_app()
 
     def save_stage(self, path: str | Path) -> Path:
         """Export the generated USD scene for inspection or later replay."""
@@ -157,6 +161,22 @@ class IsaacCityRuntime:
     def close(self) -> None:
         if self.simulation_app is not None:
             self.simulation_app.close()
+
+    def _attach_to_running_app(self) -> bool:
+        """Return True when executing inside an already-open Isaac Sim UI."""
+        try:
+            import omni.kit.app  # type: ignore[import-not-found]
+
+            self._kit_app = omni.kit.app.get_app()
+            return self._kit_app is not None
+        except ImportError:
+            return False
+
+    def _update_app(self) -> None:
+        if self.simulation_app is not None:
+            self.simulation_app.update()
+        elif self._kit_app is not None:
+            self._kit_app.update()
 
     def _require_stage(self) -> None:
         if self.stage is None:
