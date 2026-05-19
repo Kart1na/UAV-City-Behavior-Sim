@@ -49,6 +49,7 @@ class IsaacCityRuntime:
     _omni_usd: Any | None = None
     _timeline: Any | None = None
     _UsdGeom: Any | None = None
+    _UsdLux: Any | None = None
     _UsdShade: Any | None = None
     _Sdf: Any | None = None
     _Gf: Any | None = None
@@ -79,7 +80,7 @@ class IsaacCityRuntime:
             import omni.timeline  # type: ignore[import-not-found]
             import omni.usd  # type: ignore[import-not-found]
             import omni.kit.app  # type: ignore[import-not-found]
-            from pxr import Gf, Sdf, UsdGeom, UsdShade  # type: ignore[import-not-found]
+            from pxr import Gf, Sdf, UsdGeom, UsdLux, UsdShade  # type: ignore[import-not-found]
         except ImportError as exc:  # pragma: no cover - requires Isaac Sim
             raise IsaacUnavailableError(
                 "Isaac Sim modules were not available after launch. Run from an "
@@ -90,6 +91,7 @@ class IsaacCityRuntime:
         self._omni_usd = omni.usd
         self._timeline = omni.timeline.get_timeline_interface()
         self._UsdGeom = UsdGeom
+        self._UsdLux = UsdLux
         self._UsdShade = UsdShade
         self._Sdf = Sdf
         self._Gf = Gf
@@ -113,6 +115,8 @@ class IsaacCityRuntime:
         self._UsdGeom.Xform.Define(self.stage, self.config.agents_path)
         self._UsdGeom.Xform.Define(self.stage, self.config.events_path)
         self._UsdGeom.Xform.Define(self.stage, self.config.uav_path)
+        self._create_lighting(scene)
+        self._create_overview_camera(scene)
 
         use_procedural = bool(scene.raw_config.get("use_procedural_geometry", True))
         self._attach_city_reference(scene)
@@ -238,6 +242,32 @@ class IsaacCityRuntime:
             scale=(scene.width, scene.height, 0.06),
             material_name="ground",
         )
+
+    def _create_lighting(self, scene: SceneManager) -> None:
+        dome = self._UsdLux.DomeLight.Define(self.stage, f"{self.config.world_path}/Lights/Dome")
+        dome.CreateIntensityAttr(450.0)
+        dome.CreateColorAttr(self._Gf.Vec3f(0.92, 0.96, 1.0))
+
+        sun = self._UsdLux.DistantLight.Define(self.stage, f"{self.config.world_path}/Lights/Sun")
+        sun.CreateIntensityAttr(1800.0)
+        sun.CreateAngleAttr(0.8)
+        self._UsdGeom.XformCommonAPI(sun.GetPrim()).SetRotate(
+            self._Gf.Vec3f(-50.0, 0.0, -35.0),
+            self._UsdGeom.XformCommonAPI.RotationOrderXYZ,
+        )
+
+    def _create_overview_camera(self, scene: SceneManager) -> None:
+        camera = self._UsdGeom.Camera.Define(self.stage, f"{self.config.world_path}/OverviewCamera")
+        center_x = scene.width / 2.0
+        center_y = scene.height / 2.0
+        self._UsdGeom.XformCommonAPI(camera.GetPrim()).SetTranslate(
+            self._Gf.Vec3d(center_x, center_y - scene.height * 0.9, max(scene.width, scene.height) * 0.75)
+        )
+        self._UsdGeom.XformCommonAPI(camera.GetPrim()).SetRotate(
+            self._Gf.Vec3f(58.0, 0.0, 0.0),
+            self._UsdGeom.XformCommonAPI.RotationOrderXYZ,
+        )
+        camera.CreateFocalLengthAttr(18.0)
 
     def _attach_city_reference(self, scene: SceneManager) -> None:
         assets = scene.raw_config.get("assets", {})
