@@ -49,6 +49,7 @@ class SceneManager:
         self.obstacles: list[Rect] = []
         self.exits: list[Position] = [(0.0, 50.0), (100.0, 50.0)]
         self.stage = None
+        self.raw_config: dict[str, Any] = {}
 
         data = config or self._load_config(self.config_path)
         self.load_city(data)
@@ -60,6 +61,7 @@ class SceneManager:
 
     def load_city(self, config: dict[str, Any]) -> None:
         """Load map bounds, buildings, roads, obstacles, and exits."""
+        self.raw_config = config
         bounds = config.get("bounds", {})
         self.width = float(bounds.get("width", self.width))
         self.height = float(bounds.get("height", self.height))

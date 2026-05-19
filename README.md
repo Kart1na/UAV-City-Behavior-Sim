@@ -1,8 +1,8 @@
 # UAV City Behavior Sim
 
-UAV City Behavior Sim is a lightweight Python project skeleton for simulating crowd behavior in a city scene, observing the crowd with a UAV, and inferring hidden hazards from human motion.
+UAV City Behavior Sim simulates abnormal urban events in a 3D Isaac Sim city scene, observes the crowd with a UAV, and infers hidden hazards from human motion.
 
-The current implementation can run locally without Isaac Sim. Isaac Sim-specific calls are kept as future integration points, so the project can first be tested as a simple 2D simulation loop.
+The project keeps a lightweight local Python loop for fast logic testing, but the primary runtime is now `experiments/run_isaac_episode.py`, which creates a real USD scene in Isaac Sim with city geometry, humans, event markers, a UAV body, and a UAV camera.
 
 ## Features
 
@@ -10,11 +10,12 @@ The current implementation can run locally without Isaac Sim. Isaac Sim-specific
 - Human agents with position, velocity, panic, state, and goals
 - Crowd manager with simple panic contagion
 - Hidden event manager for fire, accidents, or blocked areas
-- UAV agent with pose, movement, camera placeholder, and next-best-view targeting
+- UAV agent with pose, movement, Isaac Sim camera prim, and next-best-view targeting
 - Behavior tree framework for human decision logic
 - Crowd feature extraction and hazard heatmap inference
-- Episode runner, dataset generator, and heatmap evaluation script
+- Isaac Sim episode runner, local episode runner, dataset generator, and heatmap evaluation script
 - YAML configuration files for scene, humans, events, and UAV settings
+- Optional USD city reference support through `configs/scene_city.yaml`
 
 ## Project Structure
 
@@ -32,6 +33,7 @@ The current implementation can run locally without Isaac Sim. Isaac Sim-specific
 |   `-- uav.yaml             # UAV pose, speed, and camera parameters
 |-- experiments/
 |   |-- run_episode.py       # Run one complete simulation episode
+|   |-- run_isaac_episode.py # Run and render the episode in Isaac Sim
 |   |-- generate_dataset.py  # Batch-generate episodes
 |   `-- evaluate_heatmap.py  # Evaluate predicted hazard heatmaps
 |-- inference/
@@ -40,6 +42,7 @@ The current implementation can run locally without Isaac Sim. Isaac Sim-specific
 |   `-- next_best_view.py    # UAV next-best-view selection
 `-- sim/
     |-- app.py               # Main simulation assembly and loop
+    |-- isaac_runtime.py     # Isaac Sim USD scene, prim, camera, and sync adapter
     |-- scene_manager.py     # City map and spatial queries
     |-- human_agent.py       # Single human agent
     |-- human_manager.py     # Crowd-level updates
@@ -51,12 +54,33 @@ The current implementation can run locally without Isaac Sim. Isaac Sim-specific
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.10+ for the local loop
+- Isaac Sim for the 3D runtime
 - No required third-party package for the default demo
 - Optional: `PyYAML` for richer YAML parsing
-- Optional later: Isaac Sim for real scene primitives, sensors, and rendering
 
-## Quick Start
+## Isaac Sim Quick Start
+
+Run the 3D city anomaly simulation from an Isaac Sim shell:
+
+```powershell
+isaac-sim.bat --no-window --python experiments/run_isaac_episode.py --headless --frames 240 --output-dir outputs/isaac/default
+```
+
+Or run it with the Isaac Sim UI:
+
+```powershell
+isaac-sim.bat --python experiments/run_isaac_episode.py --frames 240 --output-dir outputs/isaac/default
+```
+
+The Isaac runner writes:
+
+- `outputs/isaac/default/frames.json`: frame-by-frame humans, events, and UAV pose
+- `outputs/isaac/default/city_anomaly_episode.usd`: the generated 3D USD scene
+
+If your Isaac installation uses a different launcher path, call the same script with Isaac Sim's bundled Python interpreter. A normal system Python cannot import Isaac Sim modules.
+
+## Local Quick Start
 
 Run one short smoke test:
 
@@ -78,7 +102,7 @@ outputs\episodes\default\frames.json
 
 ## Configuration
 
-By default, `experiments/run_episode.py` reads:
+By default, both `experiments/run_episode.py` and `experiments/run_isaac_episode.py` read:
 
 ```text
 configs/scene_city.yaml
@@ -86,6 +110,15 @@ configs/humans.yaml
 configs/events.yaml
 configs/uav.yaml
 ```
+
+`configs/scene_city.yaml` describes the city footprint used by both runtimes. Isaac Sim turns those rectangles into 3D USD geometry. You can also reference a detailed USD city asset:
+
+```yaml
+usd_reference: assets/my_city.usd
+use_procedural_geometry: false
+```
+
+Set `use_procedural_geometry: true` if you want the referenced city plus the generated roads/buildings/obstacles.
 
 You can provide custom config paths:
 
@@ -126,22 +159,16 @@ python -m experiments.generate_dataset --num-episodes 10 --output-root outputs/e
 
 This is designed to compare the predicted hazard peak against a known ground-truth event position.
 
-## Isaac Sim Integration Points
+## Isaac Sim Runtime
 
-The current code is intentionally Isaac Sim-friendly but not Isaac Sim-dependent.
+`sim/isaac_runtime.py` is the runtime bridge. It launches Isaac Sim, creates a USD stage, builds city geometry, instantiates event markers, creates human capsules, creates the UAV and camera prim, then synchronizes Python simulation state into Isaac Sim every frame.
 
-Recommended integration targets:
-
-- `sim/scene_manager.py`: connect city geometry to `get_stage()` and `create_prim()`
-- `sim/human_agent.py`: replace local 2D position updates with Isaac Sim transforms such as `apply_translation()`
-- `sim/uav_agent.py`: connect `CameraSensor()`, `set_world_pose()`, and `capture_image()`
-- `sim/app.py`: connect the loop to Isaac Sim stage, viewport, camera capture, and simulation clock
+The 2D logic remains the source of behavior state. Isaac Sim is responsible for the actual 3D scene, visualization, camera, and exported USD. This keeps behavior-tree and inference work testable without requiring Isaac Sim for every edit.
 
 ## Suggested Development Order
 
-1. Confirm the local 2D loop runs with `experiments.run_episode`.
-2. Add richer scene and human configs.
-3. Improve behavior tree actions and conditions.
-4. Tune hazard heatmap inference.
-5. Connect UAV camera and movement to Isaac Sim.
-6. Add rendered image outputs and dataset export formats such as PNG or NPZ.
+1. Replace capsule humans with animated people assets if your Isaac Sim install includes a crowd/people extension.
+2. Attach real smoke/fire/traffic accident assets to event kinds.
+3. Add camera RGB/depth/segmentation export through Isaac Replicator.
+4. Improve behavior-tree navigation with path planning around obstacles.
+5. Expand dataset export formats such as PNG, NPZ, or COCO-style annotations.

@@ -1,17 +1,41 @@
 humans:
   - id: h0
     position: [18, 46]
-    goal: [95, 50]
+    goal: [115, 50]
     personality: cautious
   - id: h1
     position: [21, 49]
-    goal: [95, 50]
+    goal: [115, 50]
     personality: normal
   - id: h2
     position: [24, 52]
-    goal: [95, 50]
+    goal: [115, 50]
     personality: social
   - id: h3
     position: [27, 45]
-    goal: [95, 50]
+    goal: [115, 50]
     personality: curious
+  - id: h4
+    position: [54, 84]
+    goal: [56, 4]
+    personality: normal
+  - id: h5
+    position: [58, 82]
+    goal: [56, 4]
+    personality: cautious
+  - id: h6
+    position: [96, 50]
+    goal: [4, 50]
+    personality: social
+  - id: h7
+    position: [101, 53]
+    goal: [4, 50]
+    personality: curious
+  - id: h8
+    position: [87, 82]
+    goal: [56, 100]
+    personality: cautious
+  - id: h9
+    position: [82, 77]
+    goal: [115, 50]
+    personality: normal

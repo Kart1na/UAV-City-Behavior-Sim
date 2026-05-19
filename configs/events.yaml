@@ -1,6 +1,16 @@
 events:
   - id: fire_0
     kind: fire
-    position: [72, 45]
+    position: [74, 45]
     radius: 14
+    active: true
+  - id: accident_0
+    kind: accident
+    position: [50, 48]
+    radius: 10
+    active: true
+  - id: blockage_0
+    kind: blockage
+    position: [84, 70]
+    radius: 9
     active: true
