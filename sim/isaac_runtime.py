@@ -59,7 +59,8 @@ class IsaacCityRuntime:
 
     def launch(self) -> "IsaacCityRuntime":
         """Attach to a running Isaac Sim app or launch one from Isaac Python."""
-        if not self._attach_to_running_app():
+        running_app = self._attach_to_running_app()
+        if not running_app:
             try:
                 try:
                     from isaacsim import SimulationApp
@@ -74,10 +75,16 @@ class IsaacCityRuntime:
 
             self.simulation_app = SimulationApp({"headless": self.config.headless})
 
-        import omni.timeline  # type: ignore[import-not-found]
-        import omni.usd  # type: ignore[import-not-found]
-        import omni.kit.app  # type: ignore[import-not-found]
-        from pxr import Gf, Sdf, UsdGeom, UsdShade  # type: ignore[import-not-found]
+        try:
+            import omni.timeline  # type: ignore[import-not-found]
+            import omni.usd  # type: ignore[import-not-found]
+            import omni.kit.app  # type: ignore[import-not-found]
+            from pxr import Gf, Sdf, UsdGeom, UsdShade  # type: ignore[import-not-found]
+        except ImportError as exc:  # pragma: no cover - requires Isaac Sim
+            raise IsaacUnavailableError(
+                "Isaac Sim modules were not available after launch. Run from an "
+                "open Isaac Sim Script Editor or Isaac Sim's bundled python.sh."
+            ) from exc
 
         self._kit_app = omni.kit.app.get_app()
         self._omni_usd = omni.usd
@@ -165,12 +172,18 @@ class IsaacCityRuntime:
     def _attach_to_running_app(self) -> bool:
         """Return True when executing inside an already-open Isaac Sim UI."""
         try:
+            import omni.usd  # type: ignore[import-not-found]
+        except ImportError:
+            return False
+
+        try:
             import omni.kit.app  # type: ignore[import-not-found]
 
             self._kit_app = omni.kit.app.get_app()
-            return self._kit_app is not None
         except ImportError:
-            return False
+            self._kit_app = None
+
+        return True
 
     def _update_app(self) -> None:
         if self.simulation_app is not None:
