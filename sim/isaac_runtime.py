@@ -188,8 +188,6 @@ class IsaacCityRuntime:
     def _update_app(self) -> None:
         if self.simulation_app is not None:
             self.simulation_app.update()
-        elif self._kit_app is not None:
-            self._kit_app.update()
 
     def _require_stage(self) -> None:
         if self.stage is None:
