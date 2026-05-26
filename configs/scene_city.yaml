@@ -1,6 +1,17 @@
 bounds:
   width: 120
   height: 100
+use_procedural_geometry: true
+assets:
+  # Optional real USD assets. Leave empty to use the built-in procedural visual assets.
+  city_usd:
+  human_usd:
+  fire_usd:
+  vehicle_usd:
+  barrier_usd:
+  tree_usd:
+  streetlight_usd:
+  uav_usd:
 buildings:
   - id: block_a
     x: 14

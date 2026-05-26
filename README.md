@@ -2,7 +2,7 @@
 
 UAV City Behavior Sim simulates abnormal urban events in a 3D Isaac Sim city scene, observes the crowd with a UAV, and infers hidden hazards from human motion.
 
-The project keeps a lightweight local Python loop for fast logic testing, but the primary runtime is now `experiments/run_isaac_episode.py`, which creates a real USD scene in Isaac Sim with city geometry, humans, event markers, a UAV body, and a UAV camera.
+The project keeps a lightweight local Python loop for fast logic testing, but the primary runtime is now `experiments/run_isaac_episode.py`, which creates a visually dressed USD scene in Isaac Sim with detailed procedural city assets, humanoid agents, abnormal-event effects, a UAV body, and a UAV camera. If you provide real USD assets, the same runtime can reference them instead of the procedural fallbacks.
 
 ## Features
 
@@ -15,7 +15,8 @@ The project keeps a lightweight local Python loop for fast logic testing, but th
 - Crowd feature extraction and hazard heatmap inference
 - Isaac Sim episode runner, local episode runner, dataset generator, and heatmap evaluation script
 - YAML configuration files for scene, humans, events, and UAV settings
-- Optional USD city reference support through `configs/scene_city.yaml`
+- Optional USD references for city, human, fire, vehicle, barrier, tree, streetlight, and UAV assets
+- Procedural fallback visuals: roads with lane markings and sidewalks, buildings with windows and rooftops, street trees, lamps, accident vehicles, smoke/fire, barriers, humanoids, and quadcopter UAV
 
 ## Project Structure
 
@@ -111,14 +112,24 @@ configs/events.yaml
 configs/uav.yaml
 ```
 
-`configs/scene_city.yaml` describes the city footprint used by both runtimes. Isaac Sim turns those rectangles into 3D USD geometry. You can also reference a detailed USD city asset:
+`configs/scene_city.yaml` describes the city footprint used by both runtimes. Isaac Sim turns those rectangles into dressed 3D USD geometry: asphalt, sidewalks, lane markings, buildings with windows, street furniture, event props, and humanoid agents.
+
+You can also reference detailed USD assets. Leave a field empty to use the procedural fallback for that asset type:
 
 ```yaml
-usd_reference: assets/my_city.usd
-use_procedural_geometry: false
+use_procedural_geometry: true
+assets:
+  city_usd: assets/my_city.usd
+  human_usd: assets/person.usd
+  fire_usd: assets/fire.usd
+  vehicle_usd: assets/car.usd
+  barrier_usd: assets/barrier.usd
+  tree_usd: assets/tree.usd
+  streetlight_usd: assets/streetlight.usd
+  uav_usd: assets/uav.usd
 ```
 
-Set `use_procedural_geometry: true` if you want the referenced city plus the generated roads/buildings/obstacles.
+Set `use_procedural_geometry: false` if a referenced city USD already contains the full environment. Keep it `true` if you want the referenced city plus generated simulation overlays and fallback visual details.
 
 You can provide custom config paths:
 
@@ -161,14 +172,13 @@ This is designed to compare the predicted hazard peak against a known ground-tru
 
 ## Isaac Sim Runtime
 
-`sim/isaac_runtime.py` is the runtime bridge. It launches Isaac Sim, creates a USD stage, builds city geometry, instantiates event markers, creates human capsules, creates the UAV and camera prim, then synchronizes Python simulation state into Isaac Sim every frame.
+`sim/isaac_runtime.py` is the runtime bridge. It launches or attaches to Isaac Sim, creates a USD stage, builds the visual city, instantiates event effects, creates humanoid agents, creates the UAV and camera prim, then synchronizes Python simulation state into Isaac Sim every frame.
 
 The 2D logic remains the source of behavior state. Isaac Sim is responsible for the actual 3D scene, visualization, camera, and exported USD. This keeps behavior-tree and inference work testable without requiring Isaac Sim for every edit.
 
 ## Suggested Development Order
 
-1. Replace capsule humans with animated people assets if your Isaac Sim install includes a crowd/people extension.
-2. Attach real smoke/fire/traffic accident assets to event kinds.
-3. Add camera RGB/depth/segmentation export through Isaac Replicator.
-4. Improve behavior-tree navigation with path planning around obstacles.
-5. Expand dataset export formats such as PNG, NPZ, or COCO-style annotations.
+1. Point the `assets.*_usd` fields at your production USD assets for higher fidelity.
+2. Add camera RGB/depth/segmentation export through Isaac Replicator.
+3. Improve behavior-tree navigation with path planning around obstacles.
+4. Expand dataset export formats such as PNG, NPZ, or COCO-style annotations.
